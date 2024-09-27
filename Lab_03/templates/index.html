@@ -134,12 +134,22 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script>
+    function typeEffect(element, text, index) {
+        if (index < text.length) {
+            element.append(text.charAt(index));
+            index++;
+            setTimeout(function() {
+                typeEffect(element, text, index);
+            }, 50); // Thay đổi giá trị này để điều chỉnh tốc độ gõ
+        }
+    }
+
     $(document).ready(function() {
         $('#user-input').keypress(function(e) {
             if (e.which === 13) { 
                 if (e.shiftKey) {
-
                     $('#user-input').val($('#user-input').val() + "\n");
                 } else {
                     $('#send-button').click();
@@ -158,11 +168,21 @@
             $('#chat-box').append(`<div class="message user-message">${userMessage}</div>`);
             $('#user-input').val('');
 
+            // Disable the button and show loading message
+            $('#send-button').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
             $.post('/chat', { message: userMessage }, function(data) {
-                $('#chat-box').append(`<div class="message ai-message">${data.response}</div>`);
-                $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight); 
+                const aiMessage = $('<div class="message ai-message"></div>');
+                $('#chat-box').append(aiMessage);
+                $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+                
+                // Start typing effect
+                typeEffect(aiMessage, data.response, 0);
             }).fail(function() {
                 $('#error-message').text("Sorry, something went wrong with the API.").show();
+            }).always(function() {
+                // Re-enable the button and reset the icon
+                $('#send-button').prop('disabled', false).html('<i class="fas fa-paper-plane"></i>');
             });
         });
 
@@ -171,6 +191,7 @@
         });
     });
 </script>
+
 
 </body>
 </html>
