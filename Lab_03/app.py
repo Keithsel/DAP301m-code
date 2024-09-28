@@ -1,47 +1,55 @@
-from flask import Flask, render_template, request, jsonify
+import streamlit as st
 import requests
 import json
+import toml 
 
-app = Flask(__name__)
+secrets = toml.load(".streamlit/secrets.toml")
 
-# Get api key fronm api_key.txt
-with open("api_key.txt", "r") as file:
-    OPENROUTER_API_KEY = file.read().strip()
+st.title("Chat Bot with OpenRouter")
 
-YOUR_APP_NAME = 'My Chatbot'
+api_key = secrets["API_KEY"]
+app_name = 'Chatbot with OpenRouter'
 
-def get_ai_response(user_message):
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "X-Title": YOUR_APP_NAME,  
-    }
-    data = {
-        "model": "nousresearch/hermes-3-llama-3.1-405b:free", 
-        "messages": [
-            {
-                "role": "user",
-                "content": user_message
-            }
-        ]
-    }
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+# Hiển thị các tin nhắn trước đó
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Khi người dùng nhập một câu hỏi mới
+if prompt := st.chat_input("What is up?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Gửi request tới OpenRouter API
+    response = requests.post(
+        url="https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "X-Title": app_name,  # Optional
+        },
+        data=json.dumps({
+            "model": "google/gemini-pro-1.5-exp",  # Optional, có thể thay đổi model tùy ý
+            "messages": [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ]
+        })
+    )
+
+    # Xử lý phản hồi từ API
     if response.status_code == 200:
-        response_data = response.json()
-        return response_data['choices'][0]['message']['content']
+        result = response.json()
+        assistant_response = result["choices"][0]["message"]["content"]
+
+        # Hiển thị phản hồi của assistant
+        with st.chat_message("assistant"):
+            st.markdown(assistant_response)
+
+        # Lưu lại phản hồi vào session
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
     else:
-        return "Sorry, something went wrong."
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    user_message = request.form["message"]
-    ai_response = get_ai_response(user_message)
-    return jsonify({"response": ai_response})
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        st.error(f"API call failed: {response.status_code}")
