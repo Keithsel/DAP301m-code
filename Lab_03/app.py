@@ -4,7 +4,10 @@ import json
 
 app = Flask(__name__)
 
-OPENROUTER_API_KEY = 'Your_API_Key' # Type your api key here
+# Get api key fronm api_key.txt
+with open("api_key.txt", "r") as file:
+    OPENROUTER_API_KEY = file.read().strip()
+
 YOUR_APP_NAME = 'My Chatbot'
 
 def get_ai_response(user_message):
