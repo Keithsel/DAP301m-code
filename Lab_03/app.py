@@ -17,7 +17,7 @@ def get_ai_response(user_message):
         "X-Title": YOUR_APP_NAME,  
     }
     data = {
-        "model": "nousresearch/hermes-3-llama-3.1-405b:free", 
+        "model": "meta-llama/llama-3.1-8b-instruct:free", 
         "messages": [
             {
                 "role": "user",
