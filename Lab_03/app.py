@@ -1,7 +1,8 @@
 import streamlit as st
 import requests
 import json
-import toml 
+import toml
+import time
 
 secrets = toml.load(".streamlit/secrets.toml")
 
@@ -10,8 +11,32 @@ st.title("Chat Bot with OpenRouter")
 api_key = secrets["API_KEY"]
 app_name = 'Chatbot with OpenRouter'
 
+# Khởi tạo session state cho lưu trữ chat history
+if "chat_histories" not in st.session_state:
+    st.session_state.chat_histories = []
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "current_chat_index" not in st.session_state:
+    st.session_state.current_chat_index = None
+
+# Sidebar
+st.sidebar.header("Chat Histories")
+
+# Hiển thị các cuộc trò chuyện trong lịch sử
+for idx, history in enumerate(st.session_state.chat_histories):
+    if st.sidebar.button(f"Load Chat {idx + 1}", key=f"load_chat_{idx}"):
+        st.session_state.messages = history
+        st.session_state.current_chat_index = idx
+        st.rerun()
+
+# Nút "Start New Chat"
+if st.sidebar.button("Start New Chat", key="start_new_chat"):
+    if not st.session_state.messages or len(st.session_state.messages) > 0:
+        st.session_state.messages = []
+        st.session_state.current_chat_index = None
+        st.rerun()
 
 # Hiển thị các tin nhắn trước đó
 for message in st.session_state.messages:
@@ -19,7 +44,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Khi người dùng nhập một câu hỏi mới
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input():
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -29,10 +54,10 @@ if prompt := st.chat_input("What is up?"):
         url="https://openrouter.ai/api/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {api_key}",
-            "X-Title": app_name,  # Optional
+            "X-Title": app_name,
         },
         data=json.dumps({
-            "model": "google/gemini-pro-1.5-exp",  # Optional, có thể thay đổi model tùy ý
+            "model": "google/gemini-pro-1.5-exp",
             "messages": [
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
@@ -45,11 +70,30 @@ if prompt := st.chat_input("What is up?"):
         result = response.json()
         assistant_response = result["choices"][0]["message"]["content"]
 
-        # Hiển thị phản hồi của assistant
+        # Tạo một chat message cho assistant ngay lập tức
         with st.chat_message("assistant"):
-            st.markdown(assistant_response)
+            message_placeholder = st.empty()
+            full_response = ""
+            
+            # Hiển thị từng ký tự một để tạo hiệu ứng chữ chạy
+            for chunk in assistant_response.split():
+                full_response += chunk + " "
+                time.sleep(0.05)
+                # Sử dụng st.markdown để hiển thị văn bản
+                message_placeholder.markdown(full_response)
+            
+            # Hiển thị phản hồi cuối cùng không có dấu nháy
+            message_placeholder.markdown(full_response)
 
         # Lưu lại phản hồi vào session
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+
+        # Cập nhật lịch sử chat
+        if st.session_state.current_chat_index is not None:
+            st.session_state.chat_histories[st.session_state.current_chat_index] = st.session_state.messages
+        else:
+            st.session_state.chat_histories.append(st.session_state.messages)
+            st.session_state.current_chat_index = len(st.session_state.chat_histories) - 1
+
     else:
         st.error(f"API call failed: {response.status_code}")
