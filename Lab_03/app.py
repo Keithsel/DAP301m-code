@@ -74,16 +74,15 @@ if prompt := st.chat_input():
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             full_response = ""
-            
+
             # Hiển thị từng ký tự một để tạo hiệu ứng chữ chạy
-            for chunk in assistant_response.split():
-                full_response += chunk + " "
-                time.sleep(0.05)
-                # Sử dụng st.markdown để hiển thị văn bản
-                message_placeholder.markdown(full_response)
-            
-            # Hiển thị phản hồi cuối cùng không có dấu nháy
-            message_placeholder.markdown(full_response)
+            for chunk in assistant_response.splitlines():  # Duyệt từng dòng
+                for word in chunk.split():  # Duyệt từng từ trong dòng
+                    full_response += word + " "
+                    message_placeholder.markdown(full_response)  # Cập nhật nội dung tin nhắn
+                    time.sleep(0.05)  # Thời gian delay giữa các từ
+                full_response += "\n"  # Thêm ký tự xuống dòng sau mỗi dòng
+                message_placeholder.markdown(full_response)  # Cập nhật lại để hiển thị dòng mới
 
         # Lưu lại phản hồi vào session
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
