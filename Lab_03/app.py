@@ -17,7 +17,7 @@ def get_ai_response(user_message):
         "X-Title": YOUR_APP_NAME,  
     }
     data = {
-        "model": "meta-llama/llama-3.1-8b-instruct:free", 
+        "model": "google/gemma-2-9b-it:free", 
         "messages": [
             {
                 "role": "user",
