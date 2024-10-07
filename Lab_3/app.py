@@ -68,6 +68,7 @@ if prompt := st.chat_input():
     # Xử lý phản hồi từ API
     if response.status_code == 200:
         result = response.json()
+        print(result)
         assistant_response = result["choices"][0]["message"]["content"]
 
         # Tạo một chat message cho assistant ngay lập tức
